@@ -1,0 +1,6 @@
+# Copy this file to android/key.properties (ignored by Git) before building a signed Play Store App Bundle:
+#   flutter build appbundle --release
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyPassword=YOUR_KEY_PASSWORD
+keyAlias=upload
+storeFile=upload-keystore.jks

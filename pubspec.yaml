@@ -1,0 +1,31 @@
+name: nodoom
+description: "No-Reels — Open-source, 100% offline Android short-form video & app blocker."
+publish_to: 'none'
+version: 1.2.0+3
+
+environment:
+  sdk: ^3.11.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/challenges/ebooks.json
+    - assets/images/logo_light.png
+    - assets/images/logo_dark.png
+  fonts:
+    - family: PlusJakartaSans
+      fonts:
+        - asset: assets/fonts/PlusJakartaSans-Regular.ttf
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf

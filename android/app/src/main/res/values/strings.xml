@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">No-Reels uses the Android Accessibility Service solely to detect short-form video feeds (YouTube Shorts, Instagram Reels, Facebook Reels, and TikTok), display the live top counter overlay, and protect your active focus lock. All processing runs 100% offline on your device; no personal or screen data is ever collected, stored externally, or transmitted.</string>
+    <string name="device_admin_description">Protects No-Reels from impulsive uninstallation while Strict Lock is active. You can unlock uninstallation at any time inside No-Reels by completing an Emergency Unlock challenge.</string>
+</resources>

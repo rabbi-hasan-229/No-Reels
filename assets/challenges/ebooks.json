@@ -1,0 +1,170 @@
+[
+  {
+    "id": "marcus_aurelius",
+    "title": "Meditations on Attention & Voluntary Focus",
+    "author": "Marcus Aurelius (Stoic Reader Edition)",
+    "pages": [
+      "Book II · On the Allocation of Waking Hours\n\nObserve how swiftly impressions dissolve when they are not anchored to deliberate purpose. Every hour spent passively consuming trivial spectacles is an hour subtracted from the brief interval granted to your rational faculty. You treat your attention as though you possessed an inexhaustible treasury of decades, yet the present moment is the only territory over which you exercise actual sovereignty. When an external distraction pulls at the mind, ask immediately: does this impression strengthen my judgment, or does it merely anesthetize awareness?",
+      "Book IV · The Citadel of the Governing Mind\n\nPeople seek retreats in the countryside, by the sea, or in foreign mountains, and you too have often craved such escapes through novelty and restless stimulation. Yet nothing is simpler or more immediate than retreating into your own governing center. A mind stripped of superfluous curiosity and compulsively refreshed novelties achieves immediate tranquility. True rest is not found in feeding the eyes a hundred unconnected images, but in ordering one's thoughts toward what is necessary and discarding what is idle.",
+      "Book VII · Returning from Impulse to Deliberation\n\nWhenever you notice that your hand has moved out of habit rather than choice, pause and trace the chain of cause and effect. An engineered stimulus demands your gaze because its maker profits from your restlessness; your task as a rational agent is to withhold automatic assent. Remind yourself that no impulse can compel action unless the ruling reason grants it permission. Reclaim your posture, close the avenue of distraction, and return at once to the work that belongs properly to a human being."
+    ],
+    "questions": [
+      {
+        "question": "According to the first section, what is the only territory over which a person exercises actual sovereignty?",
+        "options": [
+          "The present moment and one's immediate attention",
+          "Future decades planned in advance",
+          "External spectacles and public reputation",
+          "Retreats in the countryside or mountains"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "question": "How does the second section define true mental tranquility?",
+        "options": [
+          "Traveling to distant places to refresh the senses",
+          "Consuming diverse streams of visual information",
+          "Ordering thoughts toward what is necessary and discarding superfluous novelty",
+          "Avoiding all forms of reading and intellectual labor"
+        ],
+        "correctIndex": 2
+      },
+      {
+        "question": "In the third section, what must happen before an external impulse can compel you to act?",
+        "options": [
+          "The impulse must repeat at least three times",
+          "Your ruling reason must grant it assent",
+          "Your physical energy must be completely depleted",
+          "An external authority must approve the action"
+        ],
+        "correctIndex": 1
+      }
+    ]
+  },
+  {
+    "id": "seneca_time",
+    "title": "On the Stewardship of Finite Time",
+    "author": "Lucius Annaeus Seneca (Classical Reader Edition)",
+    "pages": [
+      "Chapter I · The Illusion of Scarcity\n\nIt is not that we are allotted too brief a span of life, but rather that we squander a vast portion of it in unexamined diversions. Life is amply long for the accomplishment of significant endeavors if the whole of it is invested with care. Yet when it drains away through heedless indulgence and fragmented attention, we realize its passage only when the final accounting arrives. We did not receive a short life; we actively made it short by treating hours as weightless currency.",
+      "Chapter II · The asymmetry of Property and Hours\n\nNotice how fiercely individuals guard their material estates: if a neighbor encroaches by a single meter upon their land, they immediately summon legal counsel. Yet those same individuals allow anyone and anything—algorithmic feeds, passing gossip, aimless spectacles—to trespass upon their hours without protest. No one would hand out their coins indiscriminately in the street, yet how casually we distribute our days to spectacles that leave no trace of wisdom or memory behind.",
+      "Chapter III · Reclaiming the Present from Postponement\n\nThe greatest obstacle to purposeful living is constant postponement paired with passive distraction. When you trade an hour of focused effort for an hour of effortless scrolling, you surrender the only certainty you hold in exchange for a forgettable麻醉 of the senses. He who puts the finishing touches to his life each day by acting with deliberate intent never stands in need of extra time to feel whole."
+    ],
+    "questions": [
+      {
+        "question": "What is the central thesis of Chapter I regarding human lifespan?",
+        "options": [
+          "Human life is biologically too short for major accomplishments",
+          "Life is sufficiently long if invested carefully rather than wasted in diversion",
+          "Only wealthy citizens have enough leisure to study philosophy",
+          "Time passes faster in old age than in youth"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "question": "What contradiction in human behavior does Chapter II highlight?",
+        "options": [
+          "People guard physical property fiercely but surrender their time to trivial distractions without resistance",
+          "People prefer working at night rather than during daylight hours",
+          "People read books they do not understand to impress peers",
+          "People save time carefully but spend money recklessly"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "question": "According to Chapter III, what frees a person from constantly needing more time?",
+        "options": [
+          "Delegating all daily tasks to subordinates",
+          "Acting with deliberate intent each day rather than postponing life for passive distraction",
+          "Eliminating sleep and physical exercise",
+          "Memorizing historical dates and chronicles"
+        ],
+        "correctIndex": 1
+      }
+    ]
+  },
+  {
+    "id": "epictetus_handbook",
+    "title": "Handbook of Self-Mastery & Discipline",
+    "author": "Epictetus (Stoic Reader Edition)",
+    "pages": [
+      "Section I · The Dichotomy of Agency\n\nAmong all existing things, some reside squarely within our own power while others lie outside our control. Within our power are deliberate judgment, intention, desire, and aversion—in short, every act initiated by our own will. Outside our power are external popularity, the endless stream of digital clamor, and the reactions of strangers. When you bind your emotional equilibrium to what lies outside your agency, your focus fractures; when you anchor yourself exclusively to your own choices, no external lure can command you.",
+      "Section II · The Formation of Habit\n\nEvery habit and faculty is preserved and reinforced by its corresponding actions: the habit of walking by walking, the habit of focused reading by sustained reading, and the habit of restlessness by yielding to impulse. If you yield today to the urge to seek ten minutes of aimless novelty, do not count it as a single isolated lapse; you have also added fuel to the underlying habit and weakened your resistance for tomorrow. Conversely, each time you refuse the impulse, the craving loses a fraction of its authority.",
+      "Section III · The Price of Tranquility\n\nNothing of lasting value is acquired without a corresponding price. If you wish to cultivate deep concentration and master a difficult craft, you must willingly pay the price of letting go of idle amusements and instant gratification. You cannot simultaneously indulge every passing curiosity and expect the composure of a disciplined mind. Decide clearly what character you wish to embody, and hold fast to its requirements whether in private or in public."
+    ],
+    "questions": [
+      {
+        "question": "Which of the following is classified in Section I as being strictly within our own power?",
+        "options": [
+          "Public popularity and external acclaim",
+          "Deliberate judgment, intention, desire, and aversion",
+          "The behavior and opinions of strangers",
+          "The volume of external news and clamor"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "question": "Why does Section II warn against treating a brief relapse into distraction as an isolated event?",
+        "options": [
+          "Because every action also reinforces the underlying habit and shapes future resistance",
+          "Because physical stamina cannot be recovered once lost",
+          "Because laws prohibit unscheduled breaks",
+          "Because memory erases everything learned earlier that day"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "question": "What 'price' must be paid to achieve deep concentration according to Section III?",
+        "options": [
+          "Purchasing rare manuscripts and instruments",
+          "Isolating oneself from all friends and family permanently",
+          "Relinquishing idle amusements and the urge for instant gratification",
+          "Working without rest for twenty-four hours"
+        ],
+        "correctIndex": 2
+      }
+    ]
+  },
+  {
+    "id": "sun_tzu_focus",
+    "title": "Strategic Focus & Command of Energy",
+    "author": "Sun Tzu (Classical Strategy Reader Edition)",
+    "pages": [
+      "Part I · Concentration of Force vs. Dispersion\n\nIn strategy as in cognitive endeavor, numerical volume means little when energy is scattered across a dozen fronts. When an army divides its attention to chase every fleeting movement on the horizon, it becomes weak everywhere. By contrast, when force is concentrated upon a single decisive objective while all secondary distractions are ignored, even modest resources achieve overwhelming breakthroughs. Dispersion is the parent of exhaustion; concentration is the engine of mastery.",
+      "Part II · Refusing Bait on Unfavorable Ground\n\nA prudent commander never engages merely because an adversary dangles enticing bait. Endless streams of sensational clips and engineered controversies function precisely as tactical bait: they are designed to draw your attention out of fortified preparation into reactive exhaustion. The disciplined strategist recognizes bait for what it is, refuses to enter terrain that drains stamina without yielding strategic gain, and preserves vigor for decisive action.",
+      "Part III · Mastery of Internal Order\n\nBefore seeking victory over external challenges, an organization or an individual must establish unshakable internal order. He who cannot govern his own schedule, impulses, and focus is already defeated before the contest begins. Calmness under boredom, patience during long preparation, and the immediate severance of wasteful routines form the foundation upon which every durable achievement rests."
+    ],
+    "questions": [
+      {
+        "question": "What happens when energy and attention are dispersed across many trivial fronts?",
+        "options": [
+          "Overall capability becomes weak everywhere and leads to exhaustion",
+          "Creativity automatically doubles through variety",
+          "Opponents are confused into surrendering",
+          "Resources replenish faster than when focused"
+        ],
+        "correctIndex": 0
+      },
+      {
+        "question": "How does Part II characterize sensational short-form feeds and engineered controversies?",
+        "options": [
+          "As essential intelligence briefings for daily life",
+          "As tactical bait that lures attention into reactive exhaustion without strategic gain",
+          "As harmless recreation that sharpens reflexes",
+          "As unavoidable obligations of modern citizenship"
+        ],
+        "correctIndex": 1
+      },
+      {
+        "question": "According to Part III, what must precede any victory over external challenges?",
+        "options": [
+          "Acquiring superior technology",
+          "Establishing internal order over one's own impulses, schedule, and focus",
+          "Announcing ambitious goals to competitors",
+          "Waiting for favorable weather conditions"
+        ],
+        "correctIndex": 1
+      }
+    ]
+  }
+]
