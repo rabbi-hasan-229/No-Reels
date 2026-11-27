@@ -1,10 +1,13 @@
 package com.nodoom.nodoom
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.GestureDescription
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Path
+import android.graphics.Rect
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -150,44 +153,40 @@ class NoDoomAccessibilityService : AccessibilityService() {
                 currentAppId = appId
                 currentInShortFormFeed = false
                 OverlayController.hideFullAppBlock()
-                if (appId != "tiktok") {
-                    OverlayController.hideVideoRegionCover()
-                }
+                OverlayController.hideVideoRegionCover()
                 startUsageTicker()
-                // Schedule rapid follow-up scans during app launch transition so TikTok/Reels
-                // are caught the instant their window tree finishes attaching.
-                handler.postDelayed({ if (currentAppId == appId) performScreenScan() }, 70L)
-                handler.postDelayed({ if (currentAppId == appId) performScreenScan() }, 180L)
-                handler.postDelayed({ if (currentAppId == appId) performScreenScan() }, 350L)
+                // Schedule quick follow-up scans on app launch so TikTok's Home tab is redirected
+                // the instant its bottom navigation bar finishes inflating.
+                if (appId == "tiktok") {
+                    handler.postDelayed({ if (currentAppId == "tiktok") performScreenScan() }, 100L)
+                    handler.postDelayed({ if (currentAppId == "tiktok") performScreenScan() }, 260L)
+                }
             }
 
             if (event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED) {
                 handleViewScrolled(appId, pkg, event)
             }
 
-            // Fast-path: if blocking is active and not yet in feed, or on window/click/select change,
-            // execute leading-edge scan immediately (0ms delay) instead of waiting for throttle.
             val urgentEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED ||
                 event.eventType == AccessibilityEvent.TYPE_VIEW_SELECTED ||
                 (!currentInShortFormFeed && NoDoomPrefs.shouldBlockReels(appId))
             requestScan(if (urgentEvent) 0L else SCAN_THROTTLE_MS)
-        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && !isSystemTransientPackage(pkg)) {
-            if (!isProtectedSystemPackage(pkg)) {
-                OverlayController.hideStrictProtectionShield()
-            }
-            // Only clear currentAppId if the active foreground window truly changed away from currentForegroundPkg
-            val activeRootPkg = try { rootInActiveWindow?.packageName?.toString() } catch (_: Exception) { null }
-            val stillInMonitoredApp = currentForegroundPkg != null && activeRootPkg == currentForegroundPkg
-            if (currentAppId != null && !stillInMonitoredApp) {
-                currentForegroundPkg = null
-                currentAppId = null
-                currentInShortFormFeed = false
-                currentDmExempted = false
-                handler.removeCallbacks(usageTickRunnable)
+        } else if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            if (!isKeyboardOrAutofillPackage(pkg)) {
                 OverlayController.hideVideoRegionCover()
-                OverlayController.hideFullAppBlock()
-                OverlayController.updateStatusBarIndicator(false)
+                if (!isProtectedSystemPackage(pkg)) {
+                    OverlayController.hideStrictProtectionShield()
+                }
+                if (currentAppId != null && pkg != "com.android.systemui") {
+                    currentForegroundPkg = null
+                    currentAppId = null
+                    currentInShortFormFeed = false
+                    currentDmExempted = false
+                    handler.removeCallbacks(usageTickRunnable)
+                    OverlayController.hideFullAppBlock()
+                    OverlayController.updateStatusBarIndicator(false)
+                }
             }
         }
     }
@@ -261,7 +260,7 @@ class NoDoomAccessibilityService : AccessibilityService() {
             OverlayController.hideFullAppBlock()
         }
 
-        // 2. Scan for short-form video feed (Shorts / Reels / TikTok player)
+        // 2. Scan for short-form video feed (Shorts / Reels / TikTok Home)
         val dm = resources.displayMetrics
         val detection = FeedScanner.scan(
             root = root,
@@ -323,6 +322,39 @@ class NoDoomAccessibilityService : AccessibilityService() {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                 }
             }
+            FeedScanner.BlockStrategy.REDIRECT_TAB -> {
+                if (now - lastBackActionAt >= BACK_COOLDOWN_MS) {
+                    lastBackActionAt = now
+                    NoDoomPrefs.recordBlockedReel(applicationContext)
+                    val clicked = clickTabNodeOrParent(detection.redirectTargetNode)
+                    if (!clicked && detection.redirectTapBounds != null) {
+                        tapBoundsViaGesture(detection.redirectTapBounds)
+                    } else if (detection.redirectTapBounds != null) {
+                        // Verify 160ms later: if TikTok's custom tab view ignored ACTION_CLICK, fire gesture tap
+                        val fallbackBounds = Rect(detection.redirectTapBounds)
+                        handler.postDelayed({
+                            if (currentAppId == "tiktok") {
+                                val r = findTargetRoot(detection.packageName)
+                                if (r != null) {
+                                    val dm = resources.displayMetrics
+                                    val recheck = FeedScanner.scan(
+                                        r,
+                                        detection.packageName,
+                                        dm.widthPixels,
+                                        dm.heightPixels,
+                                        NoDoomPrefs.allowDmReels
+                                    )
+                                    if (recheck?.inShortFormFeed == true &&
+                                        recheck.strategy == FeedScanner.BlockStrategy.REDIRECT_TAB
+                                    ) {
+                                        tapBoundsViaGesture(fallbackBounds)
+                                    }
+                                }
+                            }
+                        }, 160L)
+                    }
+                }
+            }
             FeedScanner.BlockStrategy.COVER_VIDEO_REGION -> {
                 val bounds = detection.coverBoundsInScreen
                 if (bounds != null) {
@@ -335,6 +367,32 @@ class NoDoomAccessibilityService : AccessibilityService() {
                 }
             }
         }
+    }
+
+    private fun clickTabNodeOrParent(node: AccessibilityNodeInfo?): Boolean {
+        var cur = node
+        var depth = 0
+        while (cur != null && depth < 4) {
+            if (cur.isClickable && cur.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
+                return true
+            }
+            cur = cur.parent
+            depth++
+        }
+        return node?.performAction(AccessibilityNodeInfo.ACTION_CLICK) == true
+    }
+
+    private fun tapBoundsViaGesture(bounds: Rect) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return
+        val cx = bounds.exactCenterX()
+        val cy = bounds.exactCenterY()
+        if (cx <= 0f || cy <= 0f) return
+        try {
+            val path = Path().apply { moveTo(cx, cy) }
+            val stroke = GestureDescription.StrokeDescription(path, 0L, 25L)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            dispatchGesture(gesture, null, null)
+        } catch (_: Exception) {}
     }
 
     private fun evaluateVideoFingerprint(
@@ -573,16 +631,13 @@ class NoDoomAccessibilityService : AccessibilityService() {
         return null
     }
 
-    private fun isSystemTransientPackage(pkg: String): Boolean {
+    private fun isKeyboardOrAutofillPackage(pkg: String): Boolean {
         val lower = pkg.lowercase(Locale.ROOT)
         return lower == "android" ||
-            lower == "com.android.systemui" ||
-            lower.contains("systemui") ||
             lower.contains("inputmethod") ||
             lower.contains("keyboard") ||
             lower.contains("ime") ||
-            lower.contains("autofill") ||
-            lower.contains("overlay")
+            lower.contains("autofill")
     }
 
     override fun onInterrupt() {}

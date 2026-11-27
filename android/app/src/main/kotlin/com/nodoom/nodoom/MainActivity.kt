@@ -151,7 +151,7 @@ class MainActivity : FlutterActivity() {
                     result.success(buildStateMap(false, false))
                 }
                 "openAccessibilitySettings" -> {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                    openNoReelsAccessibilitySettings()
                     result.success(true)
                 }
                 "requestDeviceAdmin" -> {
@@ -244,6 +244,41 @@ class MainActivity : FlutterActivity() {
             "rules" to rulesList,
             "dailyHistory" to NoDoomPrefs.getLast7DaysHistory()
         )
+    }
+
+    private fun openNoReelsAccessibilitySettings() {
+        val comp = android.content.ComponentName(
+            packageName,
+            NoDoomAccessibilityService::class.java.name
+        )
+        val flatComp = comp.flattenToString()
+        val args = Bundle().apply {
+            putString(":settings:fragment_args_key", flatComp)
+        }
+        // 1. Try opening the direct No-Reels Accessibility Service detail toggle screen (Android 12+ / AOSP)
+        try {
+            val detailIntent = Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS").apply {
+                putExtra(Intent.EXTRA_COMPONENT_NAME, flatComp)
+                putExtra(":settings:fragment_args_key", flatComp)
+                putExtra(":settings:show_fragment_args", args)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(detailIntent)
+            return
+        } catch (_: Exception) {}
+
+        // 2. Fallback: open Accessibility Settings scrolled and highlighted directly on No-Reels
+        try {
+            val listIntent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                putExtra(Intent.EXTRA_COMPONENT_NAME, flatComp)
+                putExtra(":settings:fragment_args_key", flatComp)
+                putExtra(":settings:show_fragment_args", args)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(listIntent)
+        } catch (_: Exception) {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {

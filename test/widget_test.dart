@@ -2,13 +2,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nodoom/challenges/challenge_logic.dart';
-import 'package:nodoom/engine_bridge.dart';
-import 'package:nodoom/main.dart';
-import 'package:nodoom/screens/emergency_challenge_screen.dart';
-import 'package:nodoom/screens/performance_screen.dart';
-import 'package:nodoom/screens/uninstall_emotional_flow_screen.dart';
-import 'package:nodoom/theme/app_theme.dart';
+import 'package:no_reels/challenges/challenge_logic.dart';
+import 'package:no_reels/engine_bridge.dart';
+import 'package:no_reels/main.dart';
+import 'package:no_reels/screens/emergency_challenge_screen.dart';
+import 'package:no_reels/screens/performance_screen.dart';
+import 'package:no_reels/screens/uninstall_emotional_flow_screen.dart';
+import 'package:no_reels/theme/app_theme.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +46,7 @@ void main() {
   testWidgets(
     'No-Reels dashboard renders clean header, cards, and Unlock dock',
     (WidgetTester tester) async {
-      await tester.pumpWidget(const NoDoomApp());
+      await tester.pumpWidget(const NoReelsApp());
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('No-Reels'), findsWidgets);

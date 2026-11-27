@@ -165,7 +165,7 @@ flowchart TD
 ## Codebase Structure
 
 ```text
-No-Doomscrolling/
+No-Reels/
 ├── android/app/src/main/
 │   ├── AndroidManifest.xml                  # Offline manifest (zero INTERNET permission)
 │   ├── kotlin/com/nodoom/nodoom/
@@ -218,8 +218,8 @@ No-Doomscrolling/
 
 ### 1. Clone & Verify
 ```bash
-git clone https://github.com/rabbi-hasan-229/No-Doomscrolling.git
-cd No-Doomscrolling
+git clone https://github.com/rabbi-hasan-229/No-Doomscrolling.git No-Reels
+cd No-Reels
 
 # Run static analyzer & unit/widget test suite
 flutter analyze

@@ -6,11 +6,11 @@ import 'theme/app_theme.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  runApp(const NoDoomApp());
+  runApp(const NoReelsApp());
 }
 
-class NoDoomApp extends StatelessWidget {
-  const NoDoomApp({super.key});
+class NoReelsApp extends StatelessWidget {
+  const NoReelsApp({super.key});
 
   @override
   Widget build(BuildContext context) {

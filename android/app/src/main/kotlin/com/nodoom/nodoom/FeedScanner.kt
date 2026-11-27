@@ -16,6 +16,7 @@ object FeedScanner {
 
     enum class BlockStrategy {
         NAVIGATE_BACK,
+        REDIRECT_TAB,
         COVER_VIDEO_REGION
     }
 
@@ -25,9 +26,12 @@ object FeedScanner {
         val inShortFormFeed: Boolean,
         val dmExempted: Boolean,
         val strategy: BlockStrategy,
-        /** Non-null for COVER_VIDEO_REGION (TikTok player_view / view_rootview bounds). */
+        /** Non-null for COVER_VIDEO_REGION. */
         val coverBoundsInScreen: Rect? = null,
         val coverBoundsInWindow: Rect? = null,
+        /** Non-null for REDIRECT_TAB (TikTok Home -> Friends/Inbox native tab switch). */
+        val redirectTargetNode: AccessibilityNodeInfo? = null,
+        val redirectTapBounds: Rect? = null,
         val windowId: Int = -1
     )
 
@@ -323,18 +327,76 @@ object FeedScanner {
         return false
     }
 
+    private data class BottomTabInfo(
+        val isSelected: Boolean,
+        val clickableNode: AccessibilityNodeInfo?,
+        val bounds: Rect
+    )
+
+    private fun findBottomTab(
+        root: AccessibilityNodeInfo,
+        tabText: String,
+        totalW: Int,
+        totalH: Int
+    ): BottomTabInfo? {
+        val bottomBarThreshold = (totalH * 0.85f).toInt()
+        val matches = try {
+            root.findAccessibilityNodeInfosByText(tabText) ?: emptyList()
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val rect = Rect()
+        val ancRect = Rect()
+        for (n in matches) {
+            if (!n.isVisibleToUser) continue
+            n.getBoundsInScreen(rect)
+            if (rect.width() <= 0 || rect.height() <= 0) continue
+            if (rect.top < bottomBarThreshold || rect.bottom > totalH + 30) continue
+            val label = (n.text ?: n.contentDescription)?.toString()?.trim() ?: ""
+            if (!label.equals(tabText, ignoreCase = true) &&
+                !label.startsWith("$tabText,", ignoreCase = true) &&
+                !label.startsWith("$tabText ", ignoreCase = true)
+            ) {
+                continue
+            }
+
+            var selected = n.isSelected
+            var clickable: AccessibilityNodeInfo? = if (n.isClickable) n else null
+            var bestBounds = Rect(rect)
+
+            var cur = n.parent
+            var depth = 0
+            while (cur != null && depth < 4) {
+                cur.getBoundsInScreen(ancRect)
+                // Stop walking up once we hit the full-width bottom bar container
+                if (ancRect.width() > (totalW * 0.36f).toInt()) break
+                if (cur.isSelected) selected = true
+                if (clickable == null && cur.isClickable) {
+                    clickable = cur
+                    bestBounds = Rect(ancRect)
+                }
+                cur = cur.parent
+                depth++
+            }
+            return BottomTabInfo(
+                isSelected = selected,
+                clickableNode = clickable ?: n,
+                bounds = bestBounds
+            )
+        }
+        return null
+    }
+
     /**
-     * Fast, zero-flicker TikTok video feed detector & bounded player cover calculator:
+     * Native, zero-overlay TikTok detector:
      *
-     * 1. Detects TikTok's video player & main feed immediately (0ms) via view IDs,
-     *    top feed tabs ("For You", "Following"), selected bottom tabs ("Home", "Friends"),
-     *    or full-screen video containers — even before player_view finishes buffering.
-     * 2. When our opaque video cover is already on screen (activeCoverScreenBounds != null),
-     *    Android marks nodes behind the cover as isVisibleToUser = false. We therefore inspect
-     *    covered player nodes regardless of isVisibleToUser and keep the cover rock-solid
-     *    until the user explicitly navigates to Inbox, Profile, Settings, or an exempted DM.
-     * 3. Always leaves the bottom navigation bar (~9% of screen height) uncovered so Inbox
-     *    and Profile remain clickable at all times.
+     * 1. No floating black WindowManager overlay — zero open/close lag and 100% native 120Hz animations!
+     * 2. If the user is on "Friends", "Inbox", or "Profile", returns inShortFormFeed = false (allowed).
+     * 3. If the user is on the "Home" screen ("For You" / "Following"), returns REDIRECT_TAB
+     *    targeting the "Friends" tab (or "Inbox" / "Profile" fallback) so TikTok natively switches
+     *    off the Home feed and pauses video/audio immediately.
+     * 4. If the user opened a standalone full-screen video sub-page (e.g., from Search, where the
+     *    bottom tab bar is hidden and it's not an exempted DM video), returns NAVIGATE_BACK.
      */
     private fun scanTikTok(
         root: AccessibilityNodeInfo,
@@ -342,170 +404,88 @@ object FeedScanner {
         screenW: Int,
         screenH: Int,
         allowDmReels: Boolean,
-        activeCoverScreenBounds: Rect?
+        @Suppress("UNUSED_PARAMETER") activeCoverScreenBounds: Rect?
     ): DetectionResult {
-        val rootRect = Rect().also(root::getBoundsInScreen)
-        val totalW = if (screenW > 0) screenW else rootRect.width().coerceAtLeast(1080)
-        val totalH = if (screenH > 0) screenH else rootRect.height().coerceAtLeast(2200)
-        val defaultNavReserve = (totalH * 0.088f).toInt()
-        val defaultCoverBottom = (totalH - defaultNavReserve).coerceAtLeast(400)
-        val isCoverCurrentlyActive = activeCoverScreenBounds != null
+        val totalW = if (screenW > 0) screenW else 1080
+        val totalH = if (screenH > 0) screenH else 2200
 
-        val playerCandidateIds = listOf(
-            "$pkg:id/player_view",
-            "$pkg:id/simplayer_api_player_view",
-            "$pkg:id/view_rootview",
-            "$pkg:id/viewpager",
-            "$pkg:id/feed_viewpager",
-            "$pkg:id/video_view"
-        )
+        val friendsTab = findBottomTab(root, "Friends", totalW, totalH)
+        val inboxTab = findBottomTab(root, "Inbox", totalW, totalH)
+        val profileTab = findBottomTab(root, "Profile", totalW, totalH)
+            ?: findBottomTab(root, "Me", totalW, totalH)
+        val homeTab = findBottomTab(root, "Home", totalW, totalH)
 
-        var foundPlayerNode: AccessibilityNodeInfo? = null
-        val nodeRect = Rect()
+        val hasBottomBar = homeTab != null || friendsTab != null || inboxTab != null || profileTab != null
 
-        for (fullId in playerCandidateIds) {
-            val nodes = safeFindById(root, fullId)
-            for (n in nodes) {
-                n.getBoundsInScreen(nodeRect)
-                if (nodeRect.width() < totalW * 0.7f || nodeRect.height() < totalH * 0.5f) continue
-                // If our cover is active, Android marks the underlying player as not visibleToUser;
-                // accept it anyway so the cover never flickers off on content change events!
-                if (!n.isVisibleToUser && !isCoverCurrentlyActive) continue
-                foundPlayerNode = n
-                break
-            }
-            if (foundPlayerNode != null) break
+        // 1. Friends, Inbox, and Profile tabs are explicitly allowed!
+        if (friendsTab?.isSelected == true ||
+            inboxTab?.isSelected == true ||
+            profileTab?.isSelected == true
+        ) {
+            return DetectionResult("tiktok", pkg, false, false, BlockStrategy.NAVIGATE_BACK)
         }
 
-        // Single fast BFS pass to inspect bottom navigation tabs, top feed tabs,
-        // non-video screens (Inbox / Profile / Settings), and DM reply bars.
-        var homeOrFriendsTabSelected = false
-        var inboxOrProfileTabSelected = false
-        var hasTopFeedIndicators = false
-        var hasInboxOrProfileScreenMarkers = false
-        var hasFullScreenVideoSurface = false
-        var hasDmReplyBar = false
-        var detectedBottomNavTop = totalH
+        // 2. Check if we are on the TikTok Home screen ("Home" selected or "For You" visible at top)
+        val hasForYouHeader = try {
+            val forYou = root.findAccessibilityNodeInfosByText("For You") ?: emptyList()
+            forYou.any { n ->
+                n.isVisibleToUser &&
+                    Rect().also(n::getBoundsInScreen).top in 1..(totalH * 0.20f).toInt()
+            }
+        } catch (_: Exception) {
+            false
+        }
 
-        val queue = ArrayDeque<AccessibilityNodeInfo>()
-        queue.add(root)
-        var visited = 0
-
-        while (queue.isNotEmpty() && visited < 260) {
-            val node = queue.poll() ?: break
-            visited++
-            node.getBoundsInScreen(nodeRect)
-            if (nodeRect.width() <= 0 || nodeRect.height() <= 0) continue
-
-            val cls = node.className?.toString() ?: ""
-            // Detect full-screen video surface/pager even on obfuscated TikTok builds
-            if ((cls.contains("ViewPager") ||
-                    cls == "android.view.SurfaceView" ||
-                    cls == "android.view.TextureView") &&
-                nodeRect.width() >= totalW * 0.85f &&
-                nodeRect.height() >= totalH * 0.68f &&
-                (node.isVisibleToUser || isCoverCurrentlyActive)
-            ) {
-                hasFullScreenVideoSurface = true
+        if (hasBottomBar) {
+            val onHomeFeed = (homeTab?.isSelected == true) || hasForYouHeader
+            if (!onHomeFeed) {
+                return DetectionResult("tiktok", pkg, false, false, BlockStrategy.NAVIGATE_BACK)
             }
 
-            val rawLabel = (node.text ?: node.contentDescription)?.toString()?.trim() ?: ""
-            val label = rawLabel.lowercase(Locale.ROOT)
-
-            if (label.isNotEmpty()) {
-                // 1. Check bottom navigation bar tabs (located in bottom 14% of screen, always uncovered)
-                if (nodeRect.top >= (totalH * 0.85f).toInt() && nodeRect.bottom <= totalH + 20) {
-                    val isTabSelected = node.isSelected ||
-                        node.parent?.isSelected == true ||
-                        node.parent?.parent?.isSelected == true
-
-                    if (label == "home" || label == "friends" || label == "for you") {
-                        if (nodeRect.top in (totalH * 0.86f).toInt()..(totalH * 0.96f).toInt()) {
-                            detectedBottomNavTop = minOf(detectedBottomNavTop, nodeRect.top)
-                        }
-                        if (isTabSelected) homeOrFriendsTabSelected = true
-                    } else if (label == "inbox" || label == "profile" || label == "me") {
-                        if (nodeRect.top in (totalH * 0.86f).toInt()..(totalH * 0.96f).toInt()) {
-                            detectedBottomNavTop = minOf(detectedBottomNavTop, nodeRect.top)
-                        }
-                        if (isTabSelected) inboxOrProfileTabSelected = true
-                    }
-                }
-
-                // 2. Check top feed tabs ("For You", "Following", "STEM", "Explore")
-                if (nodeRect.top <= (totalH * 0.16f).toInt() &&
-                    (label == "for you" || label == "following" || label == "stem")
-                ) {
-                    hasTopFeedIndicators = true
-                }
-
-                // 3. Check unmistakable Inbox / Profile / Settings screen headers
-                if (nodeRect.top <= (totalH * 0.45f).toInt()) {
-                    if (label == "all activity" ||
-                        label == "new followers" ||
-                        label == "system notifications" ||
-                        label == "edit profile" ||
-                        label == "share profile" ||
-                        label == "add bio" ||
-                        label == "settings and privacy"
-                    ) {
-                        hasInboxOrProfileScreenMarkers = true
-                    }
-                }
-
-                // 4. Check DM video reply bar at the bottom of a friend-sent DM video
-                if (node.isVisibleToUser &&
-                    node.isEnabled &&
-                    !node.isEditable &&
-                    nodeRect.top >= (totalH * 0.80f).toInt() &&
-                    TIKTOK_DM_REPLY_PREFIXES.any { label.startsWith(it) }
-                ) {
-                    hasDmReplyBar = true
-                }
-            }
-
-            for (i in 0 until node.childCount) {
-                node.getChild(i)?.let(queue::add)
+            // Redirect off Home onto Friends (first choice), or Inbox, or Profile!
+            val targetTab = friendsTab ?: inboxTab ?: profileTab
+            if (targetTab != null) {
+                return DetectionResult(
+                    appId = "tiktok",
+                    packageName = pkg,
+                    inShortFormFeed = true,
+                    dmExempted = false,
+                    strategy = BlockStrategy.REDIRECT_TAB,
+                    redirectTargetNode = targetTab.clickableNode,
+                    redirectTapBounds = targetTab.bounds,
+                    windowId = root.windowId
+                )
             }
         }
 
-        // If the user explicitly switched to the Inbox list or Profile screen (and hasn't opened
-        // a full-screen video inside it), do NOT show the video cover.
-        val onNonVideoTab = (inboxOrProfileTabSelected || hasInboxOrProfileScreenMarkers) &&
-            !homeOrFriendsTabSelected &&
-            !hasTopFeedIndicators
+        // 3. No bottom bar visible: check if a standalone full-screen video player sub-page is open
+        val hasStandaloneVideoPlayer = hasVisibleId(root, "$pkg:id/player_view") ||
+            hasVisibleId(root, "$pkg:id/simplayer_api_player_view")
 
-        if (onNonVideoTab) {
-            return DetectionResult("tiktok", pkg, false, false, BlockStrategy.COVER_VIDEO_REGION)
+        if (!hasStandaloneVideoPlayer) {
+            return DetectionResult("tiktok", pkg, false, false, BlockStrategy.NAVIGATE_BACK)
         }
 
-        val inVideoFeed = foundPlayerNode != null ||
-            homeOrFriendsTabSelected ||
-            hasTopFeedIndicators ||
-            hasFullScreenVideoSurface ||
-            isCoverCurrentlyActive
-
-        if (!inVideoFeed) {
-            return DetectionResult("tiktok", pkg, false, false, BlockStrategy.COVER_VIDEO_REGION)
-        }
-
-        val coverBottom = if (detectedBottomNavTop < totalH) {
-            detectedBottomNavTop
+        val isDmExempt = if (!allowDmReels) {
+            false
         } else {
-            defaultCoverBottom
+            try {
+                val replyNodes = root.findAccessibilityNodeInfosByText("Reply to") ?: emptyList()
+                replyNodes.any { n ->
+                    n.isVisibleToUser && !n.isEditable &&
+                        Rect().also(n::getBoundsInScreen).top >= (totalH * 0.78f).toInt()
+                }
+            } catch (_: Exception) {
+                false
+            }
         }
-
-        val coverRect = Rect(0, 0, totalW, coverBottom)
-        val isDmExempt = allowDmReels && hasDmReplyBar
 
         return DetectionResult(
             appId = "tiktok",
             packageName = pkg,
             inShortFormFeed = true,
             dmExempted = isDmExempt,
-            strategy = BlockStrategy.COVER_VIDEO_REGION,
-            coverBoundsInScreen = coverRect,
-            coverBoundsInWindow = coverRect,
+            strategy = BlockStrategy.NAVIGATE_BACK,
             windowId = root.windowId
         )
     }
