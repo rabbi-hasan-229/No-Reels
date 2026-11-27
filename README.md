@@ -218,7 +218,7 @@ No-Reels/
 
 ### 1. Clone & Verify
 ```bash
-git clone https://github.com/rabbi-hasan-229/No-Doomscrolling.git No-Reels
+git clone https://github.com/rabbi-hasan-229/No-Reels.git
 cd No-Reels
 
 # Run static analyzer & unit/widget test suite
