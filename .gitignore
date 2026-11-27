@@ -39,8 +39,6 @@ key.properties
 .pub/
 /build/
 /coverage/
-/test_output/
-/test
 
 # Symbolication & Obfuscation related
 app.*.symbols
