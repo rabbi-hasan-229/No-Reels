@@ -496,15 +496,28 @@ class NoDoomAccessibilityService : AccessibilityService() {
 
     private fun detectSelfDefenseThreat(event: AccessibilityEvent, pkg: String): String? {
         val lowerPkg = pkg.lowercase(Locale.ROOT)
+        if (!isProtectedSystemPackage(lowerPkg)) return null
+
         val cls = event.className?.toString()?.lowercase(Locale.ROOT) ?: ""
         val evText = event.text.joinToString(" ").lowercase(Locale.ROOT)
 
-        // Collect all visible roots across ALL windows (so popup dialogs + background activities are both checked)
+        // Inspect ONLY windows belonging to this Settings / PackageInstaller package (`pkg`),
+        // NEVER Launcher or SystemUI notification windows (which always contain the "No-Reels"
+        // icon/notification even when the user is uninstalling a completely different app).
         val roots = ArrayList<AccessibilityNodeInfo>()
         try {
-            rootInActiveWindow?.let(roots::add)
+            rootInActiveWindow?.let { r ->
+                val rPkg = r.packageName?.toString()?.lowercase(Locale.ROOT) ?: ""
+                if (rPkg == lowerPkg || isProtectedSystemPackage(rPkg)) {
+                    roots.add(r)
+                }
+            }
             for (w in windows) {
-                w.root?.let { r -> if (r !in roots) roots.add(r) }
+                val r = w.root ?: continue
+                val rPkg = r.packageName?.toString()?.lowercase(Locale.ROOT) ?: ""
+                if ((rPkg == lowerPkg || isProtectedSystemPackage(rPkg)) && r !in roots) {
+                    roots.add(r)
+                }
             }
         } catch (_: Exception) {}
 
@@ -522,9 +535,7 @@ class NoDoomAccessibilityService : AccessibilityService() {
             "deactivate",
             "device admin app",
             "remove active admin",
-            "disable admin",
-            "no-reels uninstall lock",
-            "nodoom uninstall lock"
+            "disable admin"
         )
         val appInfoDangerKeywords = listOf(
             "uninstall",
@@ -534,26 +545,19 @@ class NoDoomAccessibilityService : AccessibilityService() {
             "delete app"
         )
         val accessibilityDangerKeywords = listOf(
-            "no-reels guard",
             "use no-reels",
             "stop no-reels",
             "turn off no-reels",
-            "nodoom reel & app guard",
             "use nodoom",
             "stop nodoom",
             "turn off nodoom"
         )
 
-        val isProtectedPkg = isProtectedSystemPackage(lowerPkg)
-        val isLauncherPkg = lowerPkg.contains("launcher") || lowerPkg.contains("home")
-
-        if (!isProtectedPkg && !isLauncherPkg) return null
-
         for (root in roots) {
             val queue = ArrayDeque<AccessibilityNodeInfo>()
             queue.add(root)
             var visited = 0
-            while (queue.isNotEmpty() && visited < 260) {
+            while (queue.isNotEmpty() && visited < 240) {
                 val node = queue.poll() ?: break
                 visited++
                 if (!node.isVisibleToUser) continue
@@ -601,7 +605,8 @@ class NoDoomAccessibilityService : AccessibilityService() {
             return null
         }
 
-        if (isProtectedPkg && mentionsApp) {
+        // Only trigger when THIS Settings / PackageInstaller screen specifically targets No-Reels!
+        if (mentionsApp) {
             if (mentionsAdminDeactivate && isAdminAlreadyActive) {
                 return "DEVICE ADMIN DEACTIVATION BLOCKED"
             }
@@ -616,16 +621,12 @@ class NoDoomAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Also catch DeviceAdmin deactivation confirmation dialog even if the dialog window omits the app name
-        if (isProtectedPkg && isAdminAlreadyActive &&
-            (cls.contains("deviceadminadd") || evText.contains("strict lock active"))
+        // Also catch DeviceAdmin deactivation confirmation dialog specifically for our DeviceAdminReceiver
+        if (isAdminAlreadyActive &&
+            ((cls.contains("deviceadminadd") && mentionsApp) ||
+                evText.contains("completing an unlock challenge inside no-reels"))
         ) {
             return "DEVICE ADMIN DEACTIVATION BLOCKED"
-        }
-
-        // Catch Launcher long-press popup showing "No-Reels" + "Uninstall"
-        if (isLauncherPkg && mentionsApp && mentionsUninstallOrStop) {
-            return "LAUNCHER UNINSTALL BLOCKED"
         }
 
         return null
